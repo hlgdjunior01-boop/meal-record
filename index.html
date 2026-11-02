@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>學生餐費管理（本機儲存）</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --line:#e6e8ec; --text:#1f2430; --muted:#6b7280;
+    --brand:#2f6df6; --brand-soft:#eaf0ff; --good:#0f9d58; --bad:#d93025;
+    --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:16px 20px;position:sticky;top:0;z-index:10}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{margin:0;font-size:19px;letter-spacing:.3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  h1 .badge{font-size:11px;font-weight:600;color:var(--brand);background:var(--brand-soft);padding:3px 8px;border-radius:999px}
+  h1 .badge.local{color:#0b7a45;background:#e9f7ef}
+  main{max-width:1080px;margin:0 auto;padding:20px}
+  .tabs{display:flex;gap:6px;margin:0 0 18px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line);background:var(--card);color:var(--muted);padding:9px 16px;border-radius:999px;
+    cursor:pointer;font-size:14px;font-weight:600;transition:.15s}
+  .tab:hover{color:var(--text)}
+  .tab.on{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 4px 14px rgba(47,109,246,.28)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+  label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:0 0 6px}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+    font:inherit;color:var(--text);background:#fcfcfd;outline:none;transition:.15s}
+  input:focus,select:focus{ border-color:var(--brand);box-shadow:0 0 0 3px rgba(47,109,246,.12);background:#fff}
+  .field{margin-bottom:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1 1 140px}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid transparent;padding:10px 18px;font-weight:600;transition:.15s}
+  .btn{background:var(--brand);color:#fff}
+  .btn:hover{filter:brightness(1.06)}
+  .btn.ghost{background:#fff;border-color:var(--line);color:var(--text)}
+  .btn.ghost:hover{border-color:#c9ced8}
+  .btn.danger{background:#fff;border-color:#f2c5c2;color:var(--bad)}
+  .btn.small{padding:6px 10px;font-size:12.5px;border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:#fafbfc}
+  tbody tr:hover{background:#fafbff}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .pos{color:var(--good);font-weight:600}
+  .neg{color:var(--bad);font-weight:600}
+  .muted{color:var(--muted)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+  .pill.meal{background:#fff4e8;color:#a15c00}
+  .pill.cash{background:#e9f7ef;color:#0b7a45}
+  .empty{padding:30px 10px;text-align:center;color:var(--muted);font-size:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .stat .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+  .stat .v{font-size:24px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+  .stat.hl{background:linear-gradient(135deg,#2f6df6,#5b8dff);border:0;color:#fff;box-shadow:0 10px 26px rgba(47,109,246,.32)}
+  .stat.hl .k{color:rgba(255,255,255,.82)}
+  .stat.hl .v{font-size:30px}
+  .stat.hl .sub{font-size:12.5px;color:rgba(255,255,255,.85);margin-top:6px}
+  .stat.hl .sub b{color:#fff}
+  .rep-ctl{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  .ctl-col{min-width:0}
+  .ctl-col .field{flex:1 1 0;min-width:0}
+  .ctl-col.right{display:flex;flex-direction:column}
+  .ctl-col.right .row{flex-wrap:nowrap}
+  .ctl-col.right select{flex:1 1 auto;min-width:0}
+  .ctl-col.right .btn{flex:0 0 auto;white-space:nowrap}
+  .ctl-col .quick-row>*{flex:1 1 0;padding:10px 12px;font-size:14px}
+  .ctl-col.right .ghost-label{display:block;visibility:hidden;margin:0 0 6px;font-size:13px;line-height:1.6;font-weight:600}
+  @media (max-width:720px){
+    .rep-ctl{grid-template-columns:1fr;gap:16px}
+    .ctl-col.right .row{flex-wrap:wrap;justify-content:flex-start}
+  }
+  .pager{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+  .pager .info{font-size:12.5px;color:var(--muted);margin-right:auto}
+  .pager button:disabled{opacity:.4;cursor:not-allowed}
+  .help h2{font-size:17px;margin:26px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--brand-soft)}
+  .help h2:first-child{margin-top:0}
+  .help h3{font-size:14.5px;margin:16px 0 6px}
+  .help p,.help li{font-size:14px;line-height:1.75}
+  .help ul,.help ol{margin:6px 0 10px;padding-left:22px}
+  .help li{margin:2px 0}
+  .help code{background:#eef1f6;padding:1px 6px;border-radius:5px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+  .help .kbd{display:inline-block;border:1px solid #c9ced8;border-bottom-width:2px;background:#fff;border-radius:5px;
+    padding:0 6px;font-size:12.5px;font-weight:600}
+  .help table{margin:8px 0 12px;font-size:13.5px}
+  .help th,.help td{white-space:normal;vertical-align:top}
+  .help .tip{background:#f0f7ff;border-left:3px solid var(--brand);padding:10px 14px;border-radius:8px;margin:10px 0;font-size:13.5px}
+  .help .warn{background:#fff8e8;border-left:3px solid #e0a100;padding:10px 14px;border-radius:8px;margin:10px 0;font-size:13.5px}
+  .help .toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:0 0 4px}
+  .help .toc a{display:block;padding:9px 12px;border:1px solid var(--line);border-radius:10px;
+    text-decoration:none;color:var(--text);font-size:13.5px;font-weight:600;background:#fcfcfd}
+  .help .toc a:hover{border-color:var(--brand);color:var(--brand);background:#f7faff}
+  .meter{height:9px;border-radius:999px;background:#eef1f6;overflow:hidden;margin:6px 0 4px}
+  .meter>i{display:block;height:100%;background:linear-gradient(90deg,#2f6df6,#5b8dff);border-radius:999px;transition:width .3s}
+  .meter.warn>i{background:linear-gradient(90deg,#e08c00,#f0a92b)}
+  .meter.bad>i{background:linear-gradient(90deg,#c0392b,#e05a4a)}
+  .mini{width:100%;padding:6px 9px;border:1px solid var(--brand);border-radius:8px;font:inherit;font-size:13.5px;background:#fff}
+  tr.editing td{white-space:normal;vertical-align:middle}
+  tr.editing .mini{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+  tr.editing td.item-cell{max-width:210px}
+  tr.editing td.item-cell .mini{max-width:190px}
+  tr.editing td.num .mini{width:84px;min-width:84px;max-width:84px;padding:6px 6px;text-align:right}
+  tr.editing td.date-cell .mini{width:132px;min-width:132px;max-width:132px;padding:6px 6px}
+  .mini:focus{box-shadow:0 0 0 3px rgba(47,109,246,.12);outline:none}
+  tr.editing{background:#f5f9ff}
+  .rowacts{display:flex;gap:6px;justify-content:flex-end}
+  .searchbar{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+  .searchbar input{flex:1 1 auto;max-width:320px;padding:9px 12px 9px 34px;
+    background:#fcfcfd url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888f9c' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M20 20l-3.5-3.5'/></svg>") no-repeat 11px center;}
+  .searchbar .cnt{font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .picker-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:18px 0 8px;flex-wrap:wrap}
+  .picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .chk{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+    background:#fcfcfd;cursor:pointer;font-size:14px;font-weight:500;transition:.13s;user-select:none}
+  .chk:hover{border-color:#c9ced8;background:#fff}
+  .chk input{width:17px;height:17px;accent-color:var(--brand);margin:0;cursor:pointer;flex:0 0 auto}
+  .chk.on{border-color:var(--brand);background:var(--brand-soft);color:#1b4bc4;box-shadow:0 0 0 2px rgba(47,109,246,.12)}
+  .chk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .scroll{overflow:auto;border-radius:10px;border:1px solid var(--line)}
+  .spread{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .spread h2{margin:0;font-size:17px}
+  .note{border:1px solid #ffe1a8;background:#fffaf0;color:#7a4d00;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:#1f2430;color:#fff;
+    padding:11px 20px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:99}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast.err{background:#b3261e}
+  .hide{display:none!important}
+  @media print{
+    header,.tabs,.no-print,.note,#backupLine{display:none!important}
+    body{background:#fff}
+    .card{box-shadow:none;border:0;padding:0}
+    main{padding:0;max-width:100%}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>🍱 學生餐費管理 <span class="badge local">本機儲存</span> <span class="badge" id="cnt">—</span></h1>
+  </div>
+</header>
+
+<main>
+  <div class="note no-print" id="storageNote">
+    📌 資料存在<strong>這台電腦的瀏覽器</strong>（IndexedDB），不會上傳。換電腦或換瀏覽器看不到同一份資料，記得定期用「備份 / 還原」匯出 JSON 檔。
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-view="overview">總覽</button>
+    <button class="tab" data-view="meal">＋ 登錄餐費</button>
+    <button class="tab" data-view="pay">＋ 登錄收入</button>
+    <button class="tab" data-view="student">學生加入</button>
+    <button class="tab" data-view="report">紀錄 / 匯出</button>
+    <button class="tab" data-view="backup">備份 / 還原</button>
+    <button class="tab" data-view="help">使用說明</button>
+  </div>
+
+  <section id="view-overview">
+    <div id="hero" style="margin-bottom:16px"></div>
+    <div class="grid" style="margin-bottom:16px" id="stats"></div>
+    <div class="card">
+      <div class="spread">
+        <h2>學生餘額一覽</h2>
+        <span class="muted" style="font-size:13px">餘額 = 已收款 − 已用餐金額</span>
+      </div>
+      <div class="searchbar no-print">
+        <input id="ovSearch" type="search" placeholder="搜尋姓名或備註…" autocomplete="off">
+        <span class="cnt" id="ovCount"></span>
+      </div>
+      <div id="overviewTable"></div>
+    </div>
+  </section>
+
+    <section id="view-meal" class="hide">
+    <div class="card" style="max-width:720px">
+      <h2 style="margin:0 0 4px;font-size:17px">登錄當天餐點</h2>
+      <p class="muted" style="margin:0 0 16px;font-size:13px">填一次餐點與金額，勾選今天有吃的學生，一次全部記錄。</p>
+      <form id="mealForm">
+        <div class="row">
+          <div class="field"><label>日期</label><input type="date" name="day" required></div>
+          <div class="field"><label>金額（元／每人）</label><input type="number" name="amount" min="0" step="1" placeholder="例如 55" required></div>
+        </div>
+        <div class="field"><label>餐點名稱</label><input name="meal_name" placeholder="例如 雞腿便當 / 營養午餐" required></div>
+        <div class="field"><label>備註（選填）</label><input name="note" placeholder="例如 加購飲料"></div>
+
+        <div class="picker-head">
+          <label style="margin:0">勾選學生 <span class="muted" id="pickCount" style="font-weight:400"></span></label>
+          <div class="row" style="flex:0 0 auto;gap:6px">
+            <button type="button" class="btn ghost small" id="pickAll">全選</button>
+            <button type="button" class="btn ghost small" id="pickNone">全不選</button>
+          </div>
+        </div>
+        <div id="pickList" class="picker"></div>
+
+        <div style="margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn" type="submit">儲存勾選學生的餐費</button>
+          <span class="muted" id="mealPreview" style="font-size:13px"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section id="view-pay" class="hide">
+    <div class="card" style="max-width:560px">
+      <h2 style="margin:0 0 16px;font-size:17px">登錄餐費收入</h2>
+      <form id="payForm">
+        <div class="field"><label>學生</label><select name="student_id" required></select></div>
+        <div class="row">
+          <div class="field"><label>收款日期</label><input type="date" name="day" required></div>
+          <div class="field"><label>收入金額（元）</label><input type="number" name="amount" min="1" step="1" placeholder="例如 1000" required></div>
+        </div>
+        <div class="field"><label>備註（選填）</label><input name="note" placeholder="例如 10 月份餐費 / 現金"></div>
+        <button class="btn" type="submit">儲存收入紀錄</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="view-student" class="hide">
+    <div class="card" style="max-width:560px">
+      <h2 style="margin:0 0 16px;font-size:17px">新增學生</h2>
+      <form id="studentForm">
+        <div class="field"><label>學生姓名</label><input name="name" placeholder="例如 陳小明" required></div>
+        <div class="field"><label>備註（選填）</label><input name="note" placeholder="例如 三年二班 / 家長電話"></div>
+        <button class="btn" type="submit">新增學生</button>
+      </form>
+      <div style="margin-top:22px">
+        <div class="searchbar">
+          <input id="stuSearch" type="search" placeholder="搜尋姓名或備註…" autocomplete="off">
+          <span class="cnt" id="stuCount"></span>
+        </div>
+        <div id="studentList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-report" class="hide">
+    <div class="card">
+      <div class="no-print" style="margin-bottom:16px">
+        <h2 style="margin:0 0 12px;font-size:17px">學生紀錄表</h2>
+        <div class="rep-ctl">
+          <!-- 左：日期 -->
+          <div class="ctl-col">
+            <div class="row" style="gap:10px">
+              <div class="field" style="margin:0"><label>起日</label><input type="date" id="repFrom"></div>
+              <div class="field" style="margin:0"><label>迄日</label><input type="date" id="repTo"></div>
+            </div>
+            <div class="row quick-row" style="gap:6px;margin-top:10px">
+              <button type="button" class="btn ghost" data-range="last">上月</button>
+              <button type="button" class="btn ghost" data-range="month">本月</button>
+              <button type="button" class="btn ghost" data-range="all">全部</button>
+            </div>
+          </div>
+          <!-- 右：學生 / 列印 / CSV / 全班 PDF -->
+          <div class="ctl-col right">
+            <label class="ghost-label" aria-hidden="true">學生</label>
+            <div class="row" style="gap:8px">
+              <select id="reportSelect"></select>
+              <button class="btn ghost" id="btnPrint">列印</button>
+              <button class="btn" id="btnCsv">下載 CSV</button>
+            </div>
+            <button class="btn ghost" id="btnAllPdf" style="margin-top:10px;width:100%">匯出全班 PDF</button>
+          </div>
+        </div>
+      </div>
+      <div id="reportBody"></div>
+    </div>
+  </section>
+
+  <section id="view-backup" class="hide">
+    <div class="card">
+      <h2 style="margin:0 0 6px;font-size:17px">備份 / 還原</h2>
+      <p class="muted" style="margin:0 0 18px;font-size:13px">
+        本機快照存在瀏覽器裡（每天最多一份；IndexedDB 模式保留 30 份，退回 localStorage 模式保留 7 份）。
+        要跨電腦搬資料請用 <strong>匯出 JSON</strong>，在另一台電腦按 <strong>匯入 JSON</strong>。
+      </p>
+
+      <div class="row" style="max-width:640px;margin-bottom:6px">
+        <button class="btn ghost" id="btnExportJson">匯出 JSON 檔</button>
+        <button class="btn ghost" id="btnImportJson">匯入 JSON 檔</button>
+        <button class="btn ghost" id="btnExportAllCsv">匯出全班 CSV</button>
+        <button class="btn danger" id="btnClearBk">清除所有快照</button>
+      </div>
+      <input type="file" id="fileInput" accept=".json,application/json" class="hide">
+
+      <div style="margin-top:22px">
+        <div class="spread">
+          <h2 style="font-size:15px">還原到某一天的快照</h2>
+        </div>
+        <div class="row" style="align-items:flex-end;max-width:640px">
+          <div class="field" style="margin:0"><label>選擇快照</label><select id="restoreSelect"></select></div>
+          <button class="btn danger" id="btnRestore" style="flex:0 0 auto;padding:11px 20px">還原這個快照</button>
+        </div>
+      </div>
+
+      <div id="backupList" style="margin-top:24px"></div>
+
+      <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:16px" class="no-print">
+        <div class="spread"><h2 style="font-size:15px">從伺服器版匯入</h2></div>
+        <p class="muted" style="font-size:13px;margin:0 0 10px">若你之前在伺服器版（原網址）輸入過資料，可按這裡把它抓進本機（只抓一次，不會覆蓋，會合併）。</p>
+        <button class="btn ghost" id="btnPullServer">從伺服器匯入現有資料</button>
+        <span class="muted" id="pullInfo" style="font-size:13px;margin-left:8px"></span>
+      </div>
+    </div>
+  </section>
+  <section id="view-help" class="hide">
+    <div class="card help">
+      <div class="toc">
+        <a href="#h-start">① 快速開始</a>
+        <a href="#h-pages">② 各頁面功能</a>
+        <a href="#h-money">③ 金額怎麼算</a>
+        <a href="#h-export">④ 匯出方式</a>
+        <a href="#h-data">⑤ 資料儲存</a>
+        <a href="#h-faq">⑥ 常見問題</a>
+      </div>
+
+      <h2 id="h-start">① 快速開始</h2>
+      <ol>
+        <li>到 <strong>「學生加入」</strong> 建立學生名單（先填姓名就好，備註之後再補）</li>
+        <li>到 <strong>「＋ 登錄餐費」</strong>：填日期、每人金額、餐點名稱 → 勾選今天有吃的學生（可全選）→ 儲存</li>
+        <li>收到錢時到 <strong>「＋ 登錄收入」</strong>：選學生、填收款日期與金額</li>
+        <li>回 <strong>「總覽」</strong>：藍色大卡是「目前剩餘餐費」，下方可看每位學生的餘額</li>
+      </ol>
+      <div class="tip">同一餐給全班時，一次勾選、一次儲存就好。金額填「每人單價」，系統會自動乘上人數。</div>
+
+      <h2 id="h-pages">② 各頁面功能</h2>
+      <h3>總覽</h3>
+      <ul>
+        <li><strong>藍色主卡</strong>：目前剩餘餐費（全部學生「已收款 − 已用餐費」合計），並提醒幾位學生欠費</li>
+        <li><strong>四張統計卡</strong>：學生人數、累計餐費、累計收款、登錄天數</li>
+        <li><strong>學生餘額一覽</strong>：一人一行，負數代表還欠餐費（紅字）</li>
+        <li><strong>搜尋框</strong>：即時篩選姓名或備註，右側顯示「找到 x / y 位」</li>
+        <li><strong>儲存空間條</strong>：目前用量與百分比，60% 轉橘、85% 轉紅</li>
+      </ul>
+
+      <h3>＋ 登錄餐費</h3>
+      <ul>
+        <li>一次輸入同一天的餐點，勾選有吃的學生 → 一次寫入多筆</li>
+        <li><code>全選</code> 適合全班；<code>全不選</code> 後再逐一勾選</li>
+        <li>即時預覽：<code>將記錄 12 筆：雞腿便當 × 12 ＝ 660 元</code></li>
+        <li>儲存後日期、餐點名稱、金額會保留，方便同一天補登</li>
+      </ul>
+
+      <h3>＋ 登錄收入</h3>
+      <ul>
+        <li>選學生 → 收款日期 → 金額 → 備註（例如「10 月餐費」）</li>
+        <li>預繳、補繳都記在這裡</li>
+      </ul>
+
+      <h3>學生加入</h3>
+      <ul>
+        <li>新增學生：姓名必填，備註可填班級／座號</li>
+        <li><code>編輯</code> 可改姓名與備註，按 <span class="kbd">Enter</span> 儲存、<span class="kbd">Esc</span> 取消</li>
+        <li><code>刪除</code> 會一併刪掉該學生所有紀錄（會先自動存還原前快照）</li>
+        <li>同名學生會顯示橘色「同名」標籤，可從搜尋或備註分辨</li>
+      </ul>
+
+      <h3>紀錄 / 匯出</h3>
+      <ul>
+        <li><strong>左欄</strong>：起日／迄日，以及 <code>上月</code> <code>本月</code> <code>全部</code> 快捷</li>
+        <li><strong>右欄</strong>：選學生、列印、下載 CSV、匯出全班 PDF</li>
+        <li>明細表一次顯示 40 筆，超過自動分頁（第一頁／上一頁／下一頁／末頁／展開全部）</li>
+        <li>合計列永遠是「整段期間」的總和，不是當頁小計</li>
+      </ul>
+
+      <h3>備份 / 還原</h3>
+      <ul>
+        <li>匯出／匯入 JSON：跨電腦搬資料用</li>
+        <li>匯出全班 CSV：給 Excel 或會計</li>
+        <li>本機快照：每日一份，可選任一份還原；還原前會自動再存一份保險副本</li>
+        <li><code>清除所有快照</code>：只刪快照，學生資料不動</li>
+      </ul>
+
+      <h2 id="h-money">③ 金額怎麼算</h2>
+      <table>
+        <thead><tr><th>名詞</th><th>意思</th></tr></thead>
+        <tbody>
+          <tr><td>餐費</td><td>學生吃掉的金額（支出）</td></tr>
+          <tr><td>收款</td><td>家長交來的錢（收入）</td></tr>
+          <tr><td>餘額</td><td>已收款 − 已用餐費；正數＝還有預付金，<span class="neg">負數＝欠費</span></td></tr>
+          <tr><td>月初餘額</td><td>所選起日「之前」的累計餘額（不是從零開始算）</td></tr>
+          <tr><td>本月餐費／本月收款</td><td>只看所選期間內的金額</td></tr>
+          <tr><td>月末餘額</td><td>月初餘額 ＋ 本月收款 − 本月餐費</td></tr>
+        </tbody>
+      </table>
+      <div class="warn">只查某個月時，系統會自動帶入月初餘額，所以月末餘額不會算錯。選「全部」時最後一張卡改叫「目前餘額」。</div>
+
+      <h2 id="h-export">④ 匯出方式</h2>
+      <table>
+        <thead><tr><th>方式</th><th>產出</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>列印</td><td>當前學生的明細表</td><td>印給家長或自己留存（自動展開全部分頁）</td></tr>
+          <tr><td>下載 CSV</td><td>單一學生、所選期間</td><td>丟進 Excel 做樞紐、加公式</td></tr>
+          <tr><td>匯出全班 PDF</td><td>一位學生一頁</td><td>按下即直接下載 PDF 檔（不開列印視窗），字多會自動縮字，保證不跨頁</td></tr>
+          <tr><td>匯出全班 CSV</td><td>全班、每人一段</td><td>備份或交給會計</td></tr>
+          <tr><td>匯出 JSON</td><td>完整資料＋快照</td><td>換電腦、長期備份（唯一能完整還原的格式）</td></tr>
+        </tbody>
+      </table>
+      <div class="tip">列印對話框建議：邊界「預設」、取消「頁首和頁尾」、縮放「100%」，這樣一頁一位學生才不會被壓縮。</div>
+
+      <h2 id="h-data">⑤ 資料儲存</h2>
+      <ul>
+        <li>資料存在<strong>這台電腦的這個瀏覽器</strong>，使用 IndexedDB（容量依磁碟可用空間）</li>
+        <li>IndexedDB 不可用時（例如用 <code>file://</code> 開啟）自動退回 localStorage（約 5 MB）</li>
+        <li>資料<strong>不會上傳，也不會跨裝置同步</strong></li>
+        <li>上方「儲存空間」條顯示用量；60% 橘、85% 紅</li>
+        <li>每日自動快照：IndexedDB 模式保留 30 份、localStorage 模式 7 份</li>
+      </ul>
+      <div class="warn">清除瀏覽器資料（cookie／網站資料）會把紀錄一起刪掉。請定期到「備份 / 還原」按 <strong>匯出 JSON</strong>，存到雲端或隨身碟。</div>
+
+      <h2 id="h-faq">⑥ 常見問題</h2>
+      <h3>換電腦要怎麼帶資料？</h3>
+      <p>舊電腦「備份 / 還原 → 匯出 JSON」→ 新電腦打開本頁 →「匯入 JSON」。CSV 只能看，不能還原。</p>
+
+      <h3>兩個學生同名怎麼辦？</h3>
+      <p>可以並存，只要<strong>備註不同</strong>（例如三年二班／五年一班）。下拉選單會顯示「陳小明（三年二班）」，名單也會有橘色「同名」標籤。同名又同備註會被擋下，避免真的分不清。</p>
+
+      <h3>不小心刪錯資料？</h3>
+      <p>到「備份 / 還原」選最近的一份快照還原。系統在每次還原、刪除、編輯前都會先存一份保險副本。</p>
+
+      <h3>可以兩個人同時用嗎？</h3>
+      <p>同一台電腦、同一個瀏覽器可以；不同電腦各有一份獨立資料，需靠 JSON 匯出匯入合併。要多人共用同一份即時資料，得用伺服器版（SQLite）。</p>
+
+      <h3>為什麼紀錄頁一次只顯示 40 筆？</h3>
+      <p>避免一次渲染太多造成卡頓。按「展開全部」可看整段期間；列印與 CSV 一律是全部筆數。</p>
+
+      <h3>鍵盤快速鍵</h3>
+      <p><span class="kbd">Enter</span> 編輯學生時儲存　·　<span class="kbd">Esc</span> 取消編輯或清空搜尋框</p>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+<script>
+/* ================== 資料層（localStorage） ================== */
+const K_DB = 'mealfee.v1.db';
+const K_BK = 'mealfee.v1.backups';
+const KEEP_DAILY_LS = 7, KEEP_PRE_LS = 3;      // localStorage 模式：備份保留份數
+const KEEP_DAILY_IDB = 30, KEEP_PRE_IDB = 10;  // IndexedDB 模式：可以留多一點
+const QUOTA_KB = 5000;          // localStorage 常見上限（字元數）
+const BK_BUDGET_LS = 1200;      // localStorage 模式：快照預算 KB
+const BK_BUDGET_IDB = 20000;    // IndexedDB 模式：快照預算 KB
+
+const IDB_NAME = 'mealfee', IDB_STORE = 'kv';
+let USE_IDB = false;            // 是否使用 IndexedDB
+let _idb = null;
+let MEM_BK = [];                // 記憶體中的快照清單
+let EST = { usageKB: 0, quotaKB: 0, ready: false };
+
+const keepDaily = () => USE_IDB ? KEEP_DAILY_IDB : KEEP_DAILY_LS;
+const keepPre   = () => USE_IDB ? KEEP_PRE_IDB   : KEEP_PRE_LS;
+const bkBudget  = () => USE_IDB ? BK_BUDGET_IDB  : BK_BUDGET_LS;
+
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const money = n => Number(n||0).toLocaleString('zh-TW', {maximumFractionDigits:2});
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const today = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const nowStr = () => new Date().toLocaleString('zh-TW', {hour12:false});
+
+function normalize(d){
+  d = d || {};
+  const out = {
+    seq: Number(d.seq) || 1,
+    students: Array.isArray(d.students) ? d.students : [],
+    meals: Array.isArray(d.meals) ? d.meals : [],
+    payments: Array.isArray(d.payments) ? d.payments : [],
+    updatedAt: d.updatedAt || null,
+  };
+  // 修正 seq 避免重複 id
+  const maxId = Math.max(0, ...[...out.students, ...out.meals, ...out.payments].map(x => Number(x.id)||0));
+  if(out.seq <= maxId) out.seq = maxId + 1;
+  return out;
+}
+
+let DB = normalize({});
+
+/* ---------- IndexedDB 基礎 ---------- */
+function idbOpen(){
+  return new Promise((res, rej) => {
+    if(typeof indexedDB === 'undefined') return rej(new Error('不支援 IndexedDB'));
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error || new Error('開啟失敗'));
+    req.onblocked = () => rej(new Error('被其他分頁鎖住'));
+  });
+}
+function idbGet(key){
+  return new Promise((res, rej) => {
+    const tx = _idb.transaction(IDB_STORE, 'readonly');
+    const r = tx.objectStore(IDB_STORE).get(key);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function idbPut(key, val){
+  return new Promise((res, rej) => {
+    const tx = _idb.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(val, key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error || new Error('寫入中止'));
+  });
+}
+
+/* ---------- 儲存 ---------- */
+function saveDB(){
+  DB.updatedAt = new Date().toISOString();
+  if(typeof scheduleStorageNote === 'function') scheduleStorageNote();
+  if(USE_IDB){
+    idbPut('db', clone(DB)).catch(e => {
+      console.error(e);
+      toast('寫入 IndexedDB 失敗：' + (e && e.message ? e.message : e), true);
+    });
+    return;
+  }
+  try{ localStorage.setItem(K_DB, JSON.stringify(DB)); }
+  catch(e){
+    toast('儲存失敗：瀏覽器空間不足。請先匯出 JSON 備份，再到「備份 / 還原」清除快照', true);
+    throw e;
+  }
+}
+const nextId = () => DB.seq++;
+
+/* ================== 小工具 ================== */
+function toast(msg, isErr){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = 'toast', 2400);
+}
+function download(filename, text, mime='text/plain;charset=utf-8'){
+  const blob = new Blob([text], {type: mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+/* ================== 統計 / 帳 ================== */
+function summaryOf(){
+  const s = {};
+  for(const st of DB.students){
+    const spent = DB.meals.filter(m => m.studentId === st.id).reduce((a,b)=>a+Number(b.amount||0),0);
+    const paid  = DB.payments.filter(p => p.studentId === st.id).reduce((a,b)=>a+Number(b.amount||0),0);
+    s[st.id] = {spent: round2(spent), paid: round2(paid), balance: round2(paid - spent)};
+  }
+  return s;
+}
+const round2 = n => Math.round((Number(n)||0)*100)/100;
+const WD = ['日','一','二','三','四','五','六'];
+function dayWithWeek(day){
+  if(!day) return '';
+  const d = new Date(String(day) + 'T00:00:00');
+  if(isNaN(d.getTime())) return day;
+  return `${day}(${WD[d.getDay()]})`;
+}
+
+function ledgerOf(sid, from, to){
+  const st = DB.students.find(x => x.id === sid);
+  if(!st) return null;
+  from = from || ''; to = to || '';
+  const items = [];
+  DB.meals.filter(m => m.studentId === sid).forEach(m => items.push({
+    day: m.day, kind: '餐費', name: m.meal_name, note: m.note || '',
+    debit: round2(m.amount), credit: 0, id: m.id, sort: 0,
+  }));
+  DB.payments.filter(p => p.studentId === sid).forEach(p => items.push({
+    day: p.day, kind: '收款', name: p.note || '餐費收入', note: p.note || '',
+    debit: 0, credit: round2(p.amount), id: p.id, sort: 1,
+  }));
+  items.sort((a,b) => a.day === b.day ? a.sort - b.sort || a.id - b.id : a.day.localeCompare(b.day));
+
+  // 月初餘額：起日之前的所有收支
+  let opening = 0;
+  if(from) items.forEach(it => { if(it.day < from) opening += it.credit - it.debit; });
+  opening = round2(opening);
+
+  const shown = items.filter(it => (!from || it.day >= from) && (!to || it.day <= to));
+  let run = opening;
+  shown.forEach(it => { run += it.credit - it.debit; it.balance = round2(run); });
+
+  const total_debit = round2(shown.reduce((a,b)=>a+b.debit,0));
+  const total_credit = round2(shown.reduce((a,b)=>a+b.credit,0));
+  return {
+    student: st, items: shown, from, to, opening,
+    total_debit, total_credit,
+    balance: round2(run),
+    hasRange: !!(from || to),
+  };
+}
+
+function csvOf(led){
+  const q = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+  const rangeText = led.hasRange
+    ? `期間：${led.from || '（不限）'} ～ ${led.to || '（不限）'}`
+    : '期間：全部';
+  const rows = [
+    [`學生：${led.student.name} 的餐費紀錄`],
+    [rangeText],
+    [`匯出時間：${nowStr()}`],
+    [],
+    ['日期','類型','項目','餐費支出','收入','備註','累計餘額'],
+    ...(led.hasRange && led.from ? [['（月初）','','月初餘額','','','', led.opening]] : []),
+    ...led.items.map(it => [it.day, it.kind, it.name,
+      it.debit ? it.debit : '', it.credit ? it.credit : '', it.note, it.balance]),
+    [],
+    ['本月合計','','', led.total_debit, led.total_credit, '', led.balance],
+  ];
+  return '\ufeff' + rows.map(r => r.map((c,i) => (i===0 && r.length===1) ? c : q(c)).join(',')).join('\r\n');
+}
+
+/* ================== 快照 ================== */
+function bks(){ return MEM_BK; }
+function saveBks(list){
+  MEM_BK = list;
+  if(typeof scheduleStorageNote === 'function') scheduleStorageNote();
+  if(USE_IDB){
+    idbPut('backups', clone(list)).catch(e => toast('快照寫入失敗：' + (e && e.message ? e.message : e), true));
+  } else {
+    try{ localStorage.setItem(K_BK, JSON.stringify(list)); }
+    catch(e){ toast('快照寫入失敗（空間不足），已改為只保留最新 2 份', true); MEM_BK = list.slice(0, 2);
+      try{ localStorage.setItem(K_BK, JSON.stringify(MEM_BK)); }catch(_){} }
+  }
+}
+
+function bkSize(b){ return JSON.stringify(b).length; }
+
+function pruneBackups(list){
+  list = list.slice().sort((a, b) => b.ts.localeCompare(a.ts));   // 新到舊
+  const out = [];
+  let d = 0, p = 0, bytes = 0;
+  for(const b of list){
+    if(b.kind === 'daily'){
+      if(d >= keepDaily()) continue;
+      d++;
+    } else {
+      if(p >= keepPre()) continue;
+      p++;
+    }
+    const sz = bkSize(b);
+    // 至少保留最新 2 份，其餘受預算限制
+    if(out.length >= 2 && (bytes + sz) / 1024 > bkBudget()) continue;
+    out.push(b);
+    bytes += sz;
+  }
+  return out;
+}
+
+function addSnapshot(kind){
+  const list = bks();
+  const day = today();
+  if(kind === 'daily' && list.some(b => b.kind === 'daily' && b.day === day)) return false;
+
+  const payload = JSON.stringify(DB);
+  // 內容完全沒變就不重複存
+  const newest = list[0];
+  if(newest && JSON.stringify(newest.data) === payload) return false;
+
+  list.unshift({kind, day, ts: new Date().toISOString(), data: clone(DB)});
+  saveBks(pruneBackups(list));
+  return true;
+}
+
+function clearSnapshots(){
+  if(!confirm('要清除所有本機快照嗎？（學生資料不會被刪除，但就無法再還原）')) return;
+  saveBks([]);
+  renderBackups();
+  toast('已清除所有快照');
+}
+
+/* ================== 容量資訊 ================== */
+function storageInfo(){
+  const dbKB = JSON.stringify(DB).length / 1024;
+  const bkKB = JSON.stringify(MEM_BK).length / 1024;
+  const totalKB = dbKB + bkKB;
+  if(USE_IDB){
+    const quotaKB = EST.ready ? EST.quotaKB : 0;
+    const usedKB = EST.ready ? EST.usageKB : totalKB;
+    return { dbKB, bkKB, totalKB, usedKB, quotaKB,
+             pct: quotaKB ? (usedKB / quotaKB * 100) : 0, mode: 'idb' };
+  }
+  return { dbKB, bkKB, totalKB, usedKB: totalKB, quotaKB: QUOTA_KB,
+           pct: totalKB / QUOTA_KB * 100, mode: 'ls' };
+}
+
+function fmtSize(kb){
+  if(kb >= 1024 * 1024) return (kb / 1024 / 1024).toFixed(2) + ' GB';
+  if(kb >= 1024) return (kb / 1024).toFixed(1) + ' MB';
+  return kb.toFixed(1) + ' KB';
+}
+
+function quotaHint(){
+  const i = storageInfo();
+  if(i.mode === 'idb'){
+    return i.quotaKB
+      ? `資料 ${fmtSize(i.dbKB)} ＋ 快照 ${fmtSize(i.bkKB)} ＝ ${fmtSize(i.usedKB)}／可用 ${fmtSize(i.quotaKB)}（${i.pct.toFixed(2)}%）`
+      : `資料 ${fmtSize(i.dbKB)} ＋ 快照 ${fmtSize(i.bkKB)} ＝ ${fmtSize(i.totalKB)}（IndexedDB，容量以瀏覽器可用空間為準）`;
+  }
+  return `資料 ${i.dbKB.toFixed(1)} KB ＋ 快照 ${i.bkKB.toFixed(1)} KB ＝ ${i.totalKB.toFixed(1)} KB／${QUOTA_KB} KB（${i.pct.toFixed(1)}%）`;
+}
+
+async function refreshEstimate(){
+  try{
+    if(USE_IDB && navigator.storage && navigator.storage.estimate){
+      const e = await navigator.storage.estimate();
+      EST = { usageKB: (e.usage || 0) / 1024, quotaKB: (e.quota || 0) / 1024, ready: true };
+    }
+  }catch(e){ /* 忽略 */ }
+}
+
+/* ================== 畫面 ================== */
+function renderAll(){
+  const st = DB.students;
+  $('#cnt').textContent = st.length + ' 位學生';
+
+  const opts = st.map(x => `<option value="${x.id}">${esc(optLabel(x))}</option>`).join('');
+  const emptyOpt = st.length ? '' : '<option value="">（請先新增學生）</option>';
+
+  const paySel = $('#payForm select');
+  const prevPay = paySel.value;
+  paySel.innerHTML = emptyOpt + opts;
+  if(st.some(x => String(x.id) === prevPay)) paySel.value = prevPay;
+
+  const rs = $('#reportSelect');
+  const prevR = rs.value;
+  rs.innerHTML = emptyOpt + opts;
+  if(st.some(x => String(x.id) === prevR)) rs.value = prevR;
+  else if(st.length) rs.value = st[0].id;
+
+  const picked = new Set([...$$('#pickList input:checked')].map(i => i.value));
+  $('#pickList').innerHTML = st.length ? st.map(x => {
+    const on = picked.has(String(x.id));
+    return `<label class="chk${on?' on':''}"><input type="checkbox" value="${x.id}"${on?' checked':''}><span>${esc(x.name)}</span></label>`;
+  }).join('') : '<div class="empty" style="grid-column:1/-1">請先到「學生加入」建立學生</div>';
+  updatePickCount();
+
+  // 主卡
+  const sum = summaryOf();
+  const totSpent = round2(Object.values(sum).reduce((a,b)=>a+b.spent,0));
+  const totPaid  = round2(Object.values(sum).reduce((a,b)=>a+b.paid,0));
+  const remain = round2(totPaid - totSpent);
+  const oweTotal = round2(Object.values(sum).reduce((a,b)=>a + (b.balance < 0 ? -b.balance : 0), 0));
+  const oweCount = Object.values(sum).filter(b => b.balance < 0).length;
+  const days = new Set(DB.meals.map(m => m.day)).size;
+
+  $('#hero').innerHTML = `<div class="stat hl">
+      <div class="k">目前剩餘餐費（全部學生合計）</div>
+      <div class="v">${money(remain)} 元</div>
+      <div class="sub">累計收款 <b>${money(totPaid)}</b> 元 − 已用餐費 <b>${money(totSpent)}</b> 元${oweTotal>0 ? ` ｜ 另有 <b>${oweCount}</b> 位學生欠費 <b>${money(oweTotal)}</b> 元` : ''}</div>
+    </div>`;
+
+  $('#stats').innerHTML = [
+    ['學生人數', st.length + ' 位'],
+    ['累計餐費', money(totSpent) + ' 元'],
+    ['累計收款', money(totPaid) + ' 元'],
+    ['登錄天數', days + ' 天'],
+  ].map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+
+  renderOverviewRows();
+  renderStudentRows();
+
+  if($('#reportSelect').value) loadReport();
+  else $('#reportBody').innerHTML = '<div class="empty">尚無資料</div>';
+}
+
+function optLabel(x){
+  const note = (x.note || '').trim();
+  return note ? `${x.name}（${note}）` : x.name;
+}
+
+function isDupStudent(name, note, exceptId){
+  return DB.students.some(x => x.id !== exceptId
+    && x.name.trim() === name.trim()
+    && (x.note || '').trim() === (note || '').trim());
+}
+
+function matchQ(x, q){
+  if(!q) return true;
+  const hay = (String(x.name || '') + ' ' + String(x.note || '')).toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+}
+
+function renderOverviewRows(){
+  const q = ($('#ovSearch').value || '').trim().toLowerCase();
+  const sum = summaryOf();
+  const list = DB.students.filter(x => matchQ(x, q));
+  const total = DB.students.length;
+
+  const cnt = $('#ovCount');
+  cnt.textContent = q ? `找到 ${list.length} / ${total} 位` : `共 ${total} 位`;
+  cnt.style.color = (q && !list.length) ? 'var(--bad)' : '';
+
+  $('#overviewTable').innerHTML = list.length ? `<div class="scroll"><table>
+      <thead><tr><th>學生</th><th class="num">餐費</th><th class="num">已收款</th><th class="num">餘額</th><th></th></tr></thead>
+      <tbody>${list.map(x => {
+        const m = sum[x.id];
+        return `<tr>
+          <td><strong>${esc(x.name)}</strong>${x.note ? `<div class="muted" style="font-size:12px">${esc(x.note)}</div>` : ''}</td>
+          <td class="num">${money(m.spent)}</td>
+          <td class="num">${money(m.paid)}</td>
+          <td class="num ${m.balance < 0 ? 'neg':'pos'}">${money(m.balance)}</td>
+          <td class="num"><button class="btn ghost small" data-open="${x.id}">看紀錄</button></td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`
+    : (total
+        ? `<div class="empty">找不到符合「${esc(q)}」的學生</div>`
+        : '<div class="empty">還沒有學生，先到「學生加入」建立第一位學生。</div>');
+}
+
+function renderStudentRows(){
+  const q = ($('#stuSearch').value || '').trim().toLowerCase();
+  const list = DB.students.filter(x => matchQ(x, q));
+  const total = DB.students.length;
+
+  const cnt = $('#stuCount');
+  cnt.textContent = q ? `找到 ${list.length} / ${total} 位` : `共 ${total} 位`;
+  cnt.style.color = (q && !list.length) ? 'var(--bad)' : '';
+
+  $('#studentList').innerHTML = list.length ? `<div class="scroll"><table>
+      <thead><tr><th style="width:34%">姓名</th><th>備註</th><th style="width:150px"></th></tr></thead><tbody>
+      ${(() => { const c = {}; DB.students.forEach(x => { const k = x.name.trim(); c[k] = (c[k] || 0) + 1; }); return list.map(x => ({x, dup: c[x.name.trim()] > 1})); })()
+        .map(({x, dup}) => x.id === EDIT_ID ? `<tr class="editing">
+          <td><input class="mini" data-edit-name value="${esc(x.name)}" autocomplete="off"></td>
+          <td><input class="mini" data-edit-note value="${esc(x.note)}" placeholder="備註（選填）" autocomplete="off"></td>
+          <td class="num"><div class="rowacts">
+            <button class="btn small" data-save-edit="${x.id}">儲存</button>
+            <button class="btn ghost small" data-cancel-edit="1">取消</button>
+          </div></td></tr>`
+        : `<tr><td><strong>${esc(x.name)}</strong>${dup ? '<span class="pill" style="background:#fff4e8;color:#a15c00;margin-left:6px;font-weight:600">同名</span>' : ''}</td><td class="muted">${esc(x.note)||'—'}</td>
+          <td class="num"><div class="rowacts">
+            <button class="btn ghost small" data-edit="${x.id}">編輯</button>
+            <button class="btn danger small" data-del-student="${x.id}">刪除</button>
+          </div></td></tr>`).join('')}
+      </tbody></table></div>`
+    : (total
+        ? `<div class="empty">找不到符合「${esc(q)}」的學生</div>`
+        : '<div class="empty">還沒有學生</div>');
+}
+
+let EDIT_ID = null;   // 正在編輯的學生 id
+let EDIT_REC = null;  // 正在編輯的紀錄 {kind:'meals'|'payments', id}
+const PAGE_SIZE = 40;
+let REPORT_PAGE = 1;
+let REPORT_ALL = false;
+
+function range(){ return {from: $('#repFrom').value || '', to: $('#repTo').value || ''}; }
+function rangeText(from, to){
+  if(!from && !to) return '全部期間';
+  return `${from || '不限'} ～ ${to || '不限'}`;
+}
+
+function loadReport(){
+  const sid = Number($('#reportSelect').value);
+  if(!sid){ $('#reportBody').innerHTML = '<div class="empty">請先新增學生</div>'; return; }
+  const r = range();
+  const led = ledgerOf(sid, r.from, r.to);
+  if(!led){ $('#reportBody').innerHTML = '<div class="empty">找不到學生</div>'; return; }
+
+  const head = `<div style="margin-bottom:14px">
+      <div style="font-size:13px" class="muted">學生</div>
+      <div style="font-size:22px;font-weight:700">${esc(led.student.name)}</div>
+      ${led.student.note ? `<div class="muted" style="font-size:13px">${esc(led.student.note)}</div>` : ''}
+      <div style="font-size:12.5px;margin-top:2px">📅 期間：<strong>${esc(rangeText(led.from, led.to))}</strong>　<span class="muted">（${led.items.length} 筆）</span></div>
+      <div style="font-size:12px" class="muted">匯出時間：${nowStr()}</div>
+    </div>`;
+  const sum = `<div class="row" style="margin-bottom:14px">
+      ${led.from ? `<div class="stat"><div class="k">月初餘額（${esc(led.from)} 之前）</div><div class="v ${led.opening<0?'neg':'pos'}">${money(led.opening)}</div></div>` : ''}
+      <div class="stat"><div class="k">本月餐費</div><div class="v">${money(led.total_debit)}</div></div>
+      <div class="stat"><div class="k">本月收款</div><div class="v pos">${money(led.total_credit)}</div></div>
+      <div class="stat"><div class="k">${led.hasRange ? '月末餘額' : '目前餘額'}</div><div class="v ${led.balance<0?'neg':'pos'}">${money(led.balance)}</div></div>
+    </div>`;
+  const total = led.items.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if(REPORT_PAGE > pages) REPORT_PAGE = pages;
+  if(REPORT_PAGE < 1) REPORT_PAGE = 1;
+  const shown = REPORT_ALL ? led.items : led.items.slice((REPORT_PAGE - 1) * PAGE_SIZE, REPORT_PAGE * PAGE_SIZE);
+  const fromNo = total ? (REPORT_ALL ? 1 : (REPORT_PAGE - 1) * PAGE_SIZE + 1) : 0;
+  const toNo = REPORT_ALL ? total : Math.min(REPORT_PAGE * PAGE_SIZE, total);
+
+  const pager = total > PAGE_SIZE ? `<div class="pager no-print">
+      <span class="info">顯示 ${fromNo}–${toNo} 筆，共 ${total} 筆${REPORT_ALL ? '（全部展開）' : `　·　第 ${REPORT_PAGE} / ${pages} 頁，每頁 ${PAGE_SIZE} 筆`}</span>
+      ${REPORT_ALL ? `<button class="btn ghost small" data-page="fold">只顯示 ${PAGE_SIZE} 筆</button>`
+        : `<button class="btn ghost small" data-page="first" ${REPORT_PAGE === 1 ? 'disabled' : ''}>⇤ 第一頁</button>
+           <button class="btn ghost small" data-page="prev" ${REPORT_PAGE === 1 ? 'disabled' : ''}>← 上一頁</button>
+           <button class="btn ghost small" data-page="next" ${REPORT_PAGE === pages ? 'disabled' : ''}>下一頁 →</button>
+           <button class="btn ghost small" data-page="last" ${REPORT_PAGE === pages ? 'disabled' : ''}>末頁 ⇥</button>
+           <button class="btn ghost small" data-page="all">展開全部</button>`}
+    </div>` : '';
+
+  const table = led.items.length ? pager + `<div class="scroll"><table>
+      <thead><tr><th>日期</th><th>類型</th><th>項目</th><th class="num">餐費</th><th class="num">收入</th><th class="num">餘額</th><th class="no-print"></th></tr></thead>
+      <tbody>${shown.map(it => {
+        const tbl = it.kind === '餐費' ? 'meals' : 'payments';
+        const editing = EDIT_REC && EDIT_REC.kind === tbl && EDIT_REC.id === it.id;
+        if(editing) return `<tr class="editing">
+          <td class="date-cell"><input type="date" class="mini" data-rec-date value="${esc(it.day)}"></td>
+          <td><span class="pill ${it.kind==='餐費'?'meal':'cash'}">${it.kind}</span></td>
+          <td class="item-cell">
+            ${tbl === 'meals' ? `<input class="mini" data-rec-name value="${esc(it.name)}" placeholder="餐點名稱">` : ''}
+            <input class="mini" data-rec-note value="${esc(it.note || '')}" placeholder="備註（選填）"${tbl === 'meals' ? ' style="margin-top:4px"' : ''}>
+          </td>
+          <td class="num">${tbl === 'meals' ? `<input type="number" class="mini" data-rec-amount value="${it.debit}" min="0" step="1" style="text-align:right">` : '<span class="muted">—</span>'}</td>
+          <td class="num">${tbl === 'payments' ? `<input type="number" class="mini" data-rec-amount value="${it.credit}" min="1" step="1" style="text-align:right">` : '<span class="muted">—</span>'}</td>
+          <td class="num"><span class="muted" style="font-size:12px">存檔後重算</span></td>
+          <td class="num no-print"><div class="rowacts">
+            <button class="btn small" data-save-rec="1">儲存</button>
+            <button class="btn ghost small" data-cancel-rec="1">取消</button>
+          </div></td>
+        </tr>`;
+        return `<tr>
+        <td>${esc(dayWithWeek(it.day))}</td>
+        <td><span class="pill ${it.kind==='餐費'?'meal':'cash'}">${it.kind}</span></td>
+        <td>${esc(it.name)}${it.note && it.kind==='餐費' ? `<div class="muted" style="font-size:12px">${esc(it.note)}</div>` : ''}</td>
+        <td class="num">${it.debit ? money(it.debit) : '<span class="muted">—</span>'}</td>
+        <td class="num ${it.credit?'pos':''}">${it.credit ? money(it.credit) : '<span class="muted">—</span>'}</td>
+        <td class="num ${it.balance < 0 ? 'neg':''}">${money(it.balance)}</td>
+        <td class="num no-print"><div class="rowacts">
+          <button class="btn ghost small" data-edit-rec="${tbl}:${it.id}">編輯</button>
+          <button class="btn danger small" data-del="${tbl}:${it.id}">刪除</button>
+        </div></td>
+      </tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr style="font-weight:700;background:#fafbfc">
+        <td colspan="3">${led.hasRange ? '本月合計' : '合計'}${total > PAGE_SIZE ? '<span class="muted" style="font-weight:400;font-size:11.5px">（整段期間）</span>' : ''}</td>
+        <td class="num">${money(led.total_debit)}</td>
+        <td class="num">${money(led.total_credit)}</td>
+        <td class="num ${led.balance<0?'neg':'pos'}">${money(led.balance)}</td>
+        <td class="no-print"></td>
+      </tr></tfoot></table></div>`
+    : `<div class="empty">${led.hasRange ? '這個日期區間內沒有紀錄' : '這位學生還沒有任何紀錄'}</div>`;
+
+  $('#reportBody').innerHTML = head + sum + table;
+}
+
+/* ================== 備份畫面 ================== */
+function fmtTs(ts){ return new Date(ts).toLocaleString('zh-TW', {hour12:false}); }
+
+function renderBackups(){
+  const list = bks();
+  const daily = list.filter(b => b.kind === 'daily');
+  const pre   = list.filter(b => b.kind === 'prerestore');
+  const sel = $('#restoreSelect');
+  const prev = sel.value;
+  sel.innerHTML = list.length ? [
+    daily.length ? `<optgroup label="每日快照">${daily.map(b =>
+      `<option value="${b.ts}">${b.day}　${(JSON.stringify(b.data).length/1024).toFixed(0)} KB</option>`).join('')}</optgroup>` : '',
+    pre.length ? `<optgroup label="還原前保險副本">${pre.map(b =>
+      `<option value="${b.ts}">${fmtTs(b.ts)}　${(JSON.stringify(b.data).length/1024).toFixed(0)} KB</option>`).join('')}</optgroup>` : '',
+  ].join('') : '<option value="">（目前沒有快照）</option>';
+  if(list.some(b => b.ts === prev)) sel.value = prev;
+  $('#btnRestore').disabled = !list.length;
+  $('#btnRestore').style.opacity = list.length ? 1 : .45;
+
+  const rowsHtml = arr => arr.length ? arr.map(b => `<tr>
+      <td><strong>${b.kind === 'daily' ? esc(b.day) : esc(fmtTs(b.ts))}</strong></td>
+      <td class="muted">${b.kind === 'daily' ? '每日快照' : '還原前副本'}</td>
+      <td class="num">${esc(b.data.students.length)} 人</td>
+      <td class="num">${esc(b.data.meals.length)} 筆餐費</td>
+      <td class="num">${(JSON.stringify(b.data).length/1024).toFixed(0)} KB</td>
+      <td class="num"><button class="btn ghost small" data-restore="${b.ts}">還原</button></td>
+    </tr>`).join('') : '<tr><td colspan="6" class="muted" style="padding:18px">還沒有快照</td></tr>';
+
+  const info = storageInfo();
+  const pctSafe = Math.max(0, Math.min(100, info.pct || 0));
+  const cls = pctSafe >= 85 ? 'bad' : (pctSafe >= 60 ? 'warn' : '');
+  const pctShown = pctSafe > 0 && pctSafe < 1 ? pctSafe.toFixed(2) : pctSafe.toFixed(1);
+  const barW = pctSafe > 0 ? Math.max(pctSafe, 1.2) : 0;
+  const meter = `<div style="margin:0 0 16px">
+      <label style="margin-bottom:4px">瀏覽器儲存空間</label>
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px">
+        <span>${fmtSize(info.usedKB)}／${info.quotaKB ? fmtSize(info.quotaKB) : '—'}</span>
+        <strong style="color:${cls === 'bad' ? 'var(--bad)' : (cls === 'warn' ? '#b26b00' : 'var(--brand)')}">${pctShown}%</strong>
+      </div>
+      <div class="meter ${cls}"><i style="width:${barW}%"></i></div>
+      <div class="muted" style="font-size:12.5px">${quotaHint()}　·　快照上限 ${fmtSize(bkBudget())}　·　${USE_IDB ? 'IndexedDB' : 'localStorage'}</div>
+      ${(cls === 'bad') ? '<div style="font-size:12.5px;color:var(--bad);margin-top:4px">空間快滿了，建議先「匯出 JSON」備份，再清除快照。</div>' : ''}
+    </div>`;
+
+  $('#backupList').innerHTML = meter + `
+    <label>本機快照（每日 ${daily.length}/${keepDaily()} 份，還原前副本 ${pre.length}/${keepPre()} 份）</label>
+    <div class="scroll"><table>
+      <thead><tr><th>時間</th><th>類型</th><th class="num">學生</th><th class="num">餐費</th><th class="num">大小</th><th></th></tr></thead>
+      <tbody>${rowsHtml(list)}</tbody></table></div>`;
+}
+
+function restoreSnapshot(ts){
+  const b = bks().find(x => x.ts === ts);
+  if(!b) return toast('找不到這個快照', true);
+  const desc = b.kind === 'daily' ? b.day + ' 的每日快照' : fmtTs(b.ts) + ' 的還原前副本';
+  if(!confirm(`確定要還原到 ${desc} 嗎？\n\n目前的資料會被取代（系統會先自動存一份還原前副本）。`)) return;
+  addSnapshot('prerestore');
+  DB = normalize(clone(b.data));
+  saveDB();
+  renderAll();
+  renderBackups();
+  toast('已還原到 ' + desc);
+}
+
+/* ================== 匯入 / 匯出 ================== */
+function exportJson(){
+  const payload = {app:'meal-fee-local', version:1, exportedAt: new Date().toISOString(), db: DB, backups: bks()};
+  download(`餐費資料_${today()}.json`, JSON.stringify(payload, null, 2), 'application/json');
+  toast('已匯出 JSON');
+}
+
+function importJson(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const obj = JSON.parse(reader.result);
+      const db0 = obj.db || obj;
+      const data = normalize(kindCheck(db0));
+      if(!confirm(`匯入檔案：${data.students.length} 位學生、${data.meals.length} 筆餐費、${data.payments.length} 筆收款。\n\n確定要用它「取代」目前資料嗎？（會先自動存一份還原前副本）`)) return;
+      addSnapshot('prerestore');
+      DB = data;
+      saveDB();
+      if(Array.isArray(obj.backups) && obj.backups.length) saveBks(obj.backups);
+      renderAll(); renderBackups();
+      toast('匯入完成');
+    }catch(e){ toast('檔案格式不正確：' + e.message, true); }
+  };
+  reader.readAsText(file);
+}
+
+function kindCheck(d){
+  if(!d || typeof d !== 'object') throw new Error('不是有效資料');
+  if(!Array.isArray(d.students)) throw new Error('缺少 students');
+  return d;
+}
+
+/* 從伺服器版合併 */
+async function pullFromServer(){
+  try{
+    const res = await fetch('../api/state', {cache:'no-store'});
+    if(!res.ok) throw new Error('伺服器回應 ' + res.status);
+    const s = await res.json();
+    if(!s.students || !s.students.length) return toast('伺服器目前沒有資料', true);
+    if(!confirm(`伺服器上有 ${s.students.length} 位學生、${s.meals.length} 筆餐費、${s.payments.length} 筆收款。\n\n要合併進本機資料嗎？（同名學生會合併，重複紀錄會自動跳過）`)) return;
+    const r = mergeIn(s);
+    toast(`已匯入：學生 +${r.students}、餐費 +${r.meals}、收款 +${r.payments}`);
+    renderAll();
+  }catch(e){
+    toast('讀取伺服器失敗（可能不在同一網址）：' + e.message, true);
+  }
+}
+
+function mergeIn(s){
+  addSnapshot('prerestore');
+  const keyOf = (n, note) => `${String(n || '').trim()}|${String(note || '').trim()}`;
+  const byName = new Map(DB.students.map(x => [keyOf(x.name, x.note), x]));
+  let addS = 0, addM = 0, addP = 0;
+  for(const s0 of s.students || []){
+    const name = String(s0.name || '').trim();
+    if(!name) continue;
+    const k = keyOf(name, s0.note);
+    if(!byName.has(k)){
+      const st = {id: nextId(), name, note: s0.note || '', createdAt: new Date().toISOString()};
+      DB.students.push(st); byName.set(k, st); addS++;
+    }
+  }
+  const mid = new Map((s.students || []).map(x => [x.id, byName.get(keyOf(x.name, x.note))]));
+  const key = o => `${o.studentId}|${o.day}|${o.meal_name || o.amount}|${o.amount}|${o.note || ''}`;
+  const haveM = new Set(DB.meals.map(key));
+  for(const m of s.meals || []){
+    const st = mid.get(m.student_id); if(!st) continue;
+    const rec = {id: nextId(), studentId: st.id, day: m.day, meal_name: m.meal_name, amount: round2(m.amount), note: m.note || ''};
+    if(haveM.has(key(rec))) continue;
+    DB.meals.push(rec); haveM.add(key(rec)); addM++;
+  }
+  const haveP = new Set(DB.payments.map(p => `${p.studentId}|${p.day}|${p.amount}|${p.note||''}`));
+  for(const p of s.payments || []){
+    const st = mid.get(p.student_id); if(!st) continue;
+    const rec = {id: nextId(), studentId: st.id, day: p.day, amount: round2(p.amount), note: p.note || ''};
+    const k2 = `${rec.studentId}|${rec.day}|${rec.amount}|${rec.note||''}`;
+    if(haveP.has(k2)) continue;
+    DB.payments.push(rec); haveP.add(k2); addP++;
+  }
+  saveDB();
+  return {students: addS, meals: addM, payments: addP};
+}
+
+/* ================== 餐費表單 ================== */
+function pickedIds(){ return [...$$('#pickList input:checked')].map(i => Number(i.value)); }
+
+function updatePickCount(){
+  const ids = pickedIds();
+  const f = $('#mealForm');
+  if(!f) return;
+  $('#pickCount').textContent = ids.length ? `（已選 ${ids.length} 人）` : '（尚未選擇）';
+  const amt = parseFloat(f.amount.value);
+  const name = f.meal_name.value.trim();
+  $('#mealPreview').textContent = (ids.length && amt > 0 && name)
+    ? `將記錄 ${ids.length} 筆：${name} × ${ids.length} ＝ ${money(amt * ids.length)} 元` : '';
+}
+
+$('#pickList').addEventListener('change', e => {
+  const cb = e.target;
+  if(cb.type !== 'checkbox') return;
+  cb.closest('.chk').classList.toggle('on', cb.checked);
+  updatePickCount();
+});
+$('#pickAll').onclick = () => { $$('#pickList input').forEach(i => { i.checked = true; i.closest('.chk').classList.add('on'); }); updatePickCount(); };
+$('#pickNone').onclick = () => { $$('#pickList input').forEach(i => { i.checked = false; i.closest('.chk').classList.remove('on'); }); updatePickCount(); };
+['amount','meal_name'].forEach(n => $('#mealForm [name='+n+']').addEventListener('input', updatePickCount));
+
+$('#mealForm').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target;
+  const ids = pickedIds();
+  if(!ids.length) return toast('請至少勾選一位學生', true);
+  const day = f.day.value || today();
+  const name = f.meal_name.value.trim() || '餐點';
+  const amount = round2(f.amount.value);
+  if(!(amount >= 0)) return toast('金額格式不正確', true);
+
+  addSnapshot('prerestore');
+  ids.forEach(sid => DB.meals.push({id: nextId(), studentId: sid, day, meal_name: name, amount, note: f.note.value.trim()}));
+  saveDB();
+  toast(`已記錄 ${ids.length} 位學生的「${name}」`);
+
+  const keep = {day, name, amount: f.amount.value, note: f.note.value};
+  f.reset();
+  f.day.value = keep.day || today();
+  f.meal_name.value = keep.name;
+  f.amount.value = keep.amount;
+  f.note.value = keep.note;
+  renderAll();
+};
+
+/* ================== 收款表單 ================== */
+$('#payForm').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target;
+  const sid = Number(f.student_id.value);
+  if(!sid) return toast('請先新增學生', true);
+  const amount = round2(f.amount.value);
+  if(!(amount > 0)) return toast('收入金額需大於 0', true);
+  addSnapshot('prerestore');
+  DB.payments.push({id: nextId(), studentId: sid, day: f.day.value || today(), amount, note: f.note.value.trim()});
+  saveDB();
+  toast(`已登錄收入 ${money(amount)} 元`);
+  const keepS = f.student_id.value, keepD = f.day.value;
+  f.reset();
+  f.student_id.value = keepS;
+  f.day.value = keepD || today();
+  renderAll();
+};
+
+/* ================== 學生表單 ================== */
+$('#studentForm').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target;
+  const name = f.name.value.trim();
+  if(!name) return toast('請輸入學生姓名', true);
+  const note0 = f.note.value.trim();
+  if(isDupStudent(name, note0)) return toast('已經有「同名＋同備註」的學生，請在備註加班級或座號區分', true);
+  const sameName = DB.students.filter(x => x.name.trim() === name).length;
+  addSnapshot('prerestore');
+  DB.students.push({id: nextId(), name, note: note0, createdAt: new Date().toISOString()});
+  saveDB();
+  toast(sameName ? `已新增第 ${sameName + 1} 位「${name}」（${note0 || '無備註'}）` : '已新增學生 ' + name);
+  f.reset();
+  renderAll();
+};
+
+/* ================== 刪除 ================== */
+function saveRecordEdit(){
+  if(!EDIT_REC) return;
+  const {kind, id} = EDIT_REC;
+  const box = $('#reportBody');
+  const q = sel => box.querySelector(sel);
+  const dayEl = q('[data-rec-date]');
+  const amtEl = q('[data-rec-amount]');
+  const noteEl = q('[data-rec-note]');
+  const nameEl = q('[data-rec-name]');
+
+  if(!dayEl || !amtEl) return;
+
+  const day = dayEl.value;
+  const rawAmt = (amtEl.value || '').trim();
+  const parsed = parseFloat(rawAmt);
+  const note = (noteEl && noteEl.value || '').trim();
+
+  if(!day) return toast('請選擇日期', true);
+  if(!rawAmt || isNaN(parsed)) return toast('金額格式不正確', true);
+  if(parsed < 0) return toast('金額不可為負數', true);
+  if(kind === 'payments' && parsed <= 0) return toast('收入金額需大於 0', true);
+  const amount = round2(parsed);
+
+  addSnapshot('prerestore');
+
+  if(kind === 'meals'){
+    const rec = DB.meals.find(x => x.id === id);
+    if(!rec){ toast('找不到這筆紀錄', true); return; }
+    const name = (nameEl && nameEl.value || '').trim() || '餐點';
+    rec.day = day; rec.amount = amount; rec.note = note; rec.meal_name = name;
+    saveDB();
+    EDIT_REC = null;
+    renderAll();
+    toast('已更新餐費紀錄');
+  } else {
+    const rec = DB.payments.find(x => x.id === id);
+    if(!rec){ toast('找不到這筆收入', true); return; }
+    if(amount <= 0) return toast('收入金額需大於 0', true);
+    rec.day = day; rec.amount = amount; rec.note = note;
+    saveDB();
+    EDIT_REC = null;
+    renderAll();
+    toast('已更新收入紀錄');
+  }
+}
+
+function delMeal(id){
+  if(!confirm('確定刪除這筆紀錄？')) return;
+  addSnapshot('prerestore');
+  DB.meals = DB.meals.filter(x => x.id !== id);
+  saveDB(); renderAll(); toast('已刪除');
+}
+function delPay(id){
+  if(!confirm('確定刪除這筆收入？')) return;
+  addSnapshot('prerestore');
+  DB.payments = DB.payments.filter(x => x.id !== id);
+  saveDB(); renderAll(); toast('已刪除');
+}
+function saveStudentEdit(id){
+  const st = DB.students.find(x => x.id === id);
+  if(!st) return;
+  const nameEl = document.querySelector('[data-edit-name]');
+  const noteEl = document.querySelector('[data-edit-note]');
+  const name = (nameEl.value || '').trim();
+  const note = (noteEl.value || '').trim();
+
+  if(!name) return toast('姓名不能空白', true);
+  if(isDupStudent(name, note, id)) return toast('已經有「同名＋同備註」的學生，請在備註加班級或座號區分', true);
+  if(name === st.name && note === (st.note || '')){ EDIT_ID = null; renderStudentRows(); return; }
+
+  addSnapshot('prerestore');
+  st.name = name;
+  st.note = note;
+  saveDB();
+  EDIT_ID = null;
+  renderAll();
+  toast('已更新 ' + name);
+}
+
+function delStudent(id){
+  const st = DB.students.find(x => x.id === id);
+  if(!st) return;
+  if(!confirm(`刪除「${st.name}」會一併刪掉他的所有餐費與收款紀錄，確定嗎？`)) return;
+  addSnapshot('prerestore');
+  DB.students = DB.students.filter(x => x.id !== id);
+  DB.meals = DB.meals.filter(x => x.studentId !== id);
+  DB.payments = DB.payments.filter(x => x.studentId !== id);
+  saveDB(); renderAll(); toast('已刪除學生');
+}
+
+/* ================== 分頁 / 全域點擊 ================== */
+const VIEWS = ['overview','meal','pay','student','report','backup','help'];
+function showView(v){
+  $$('.tab').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  VIEWS.forEach(k => $('#view-' + k).classList.toggle('hide', k !== v));
+  if(v === 'report') loadReport();
+  if(v === 'backup') renderBackups();
+}
+$('#ovSearch').addEventListener('input', renderOverviewRows);
+$('#stuSearch').addEventListener('input', () => { EDIT_ID = null; renderStudentRows(); });
+
+// 編輯中：Enter 儲存、Esc 取消
+$('#reportBody').addEventListener('keydown', e => {
+  if(!EDIT_REC) return;
+  if(e.key === 'Enter'){ e.preventDefault(); saveRecordEdit(); }
+  else if(e.key === 'Escape'){ EDIT_REC = null; loadReport(); }
+});
+
+$('#studentList').addEventListener('keydown', e => {
+  if(!EDIT_ID) return;
+  if(e.key === 'Enter'){ e.preventDefault(); saveStudentEdit(EDIT_ID); }
+  else if(e.key === 'Escape'){ EDIT_ID = null; renderStudentRows(); }
+});
+['ovSearch','stuSearch'].forEach(id => {
+  $('#' + id).addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ e.target.value = ''; id === 'ovSearch' ? renderOverviewRows() : renderStudentRows(); }
+  });
+});
+
+$$('.tab').forEach(btn => btn.onclick = () => showView(btn.dataset.view));
+
+document.addEventListener('click', e => {
+  const er = e.target.closest('[data-edit-rec]');
+  if(er){
+    const [kind, id] = er.dataset.editRec.split(':');
+    EDIT_REC = {kind, id: Number(id)};
+    loadReport();
+    setTimeout(() => { const f = $('#reportBody').querySelector('[data-rec-date]'); if(f) f.focus(); }, 30);
+    return;
+  }
+  const sr = e.target.closest('[data-save-rec]');
+  if(sr){ saveRecordEdit(); return; }
+  const cr = e.target.closest('[data-cancel-rec]');
+  if(cr){ EDIT_REC = null; loadReport(); return; }
+
+  const ed = e.target.closest('[data-edit]');
+  if(ed){ EDIT_ID = Number(ed.dataset.edit); renderStudentRows(); return; }
+
+  const cancel = e.target.closest('[data-cancel-edit]');
+  if(cancel){ EDIT_ID = null; renderStudentRows(); return; }
+
+  const save = e.target.closest('[data-save-edit]');
+  if(save){ saveStudentEdit(Number(save.dataset.saveEdit)); return; }
+
+  const open = e.target.closest('[data-open]');
+  if(open){
+    $('#reportSelect').value = open.dataset.open;
+    showView('report');
+    return;
+  }
+  const d = e.target.closest('[data-del]');
+  if(d){
+    const [t, id] = d.dataset.del.split(':');
+    t === 'meals' ? delMeal(Number(id)) : delPay(Number(id));
+    return;
+  }
+  const ds = e.target.closest('[data-del-student]');
+  if(ds) return delStudent(Number(ds.dataset.delStudent));
+
+  const r = e.target.closest('[data-restore]');
+  if(r) return restoreSnapshot(r.dataset.restore);
+});
+
+/* ================== 報告按鈕 ================== */
+$('#reportSelect').onchange = () => { REPORT_PAGE = 1; REPORT_ALL = false; EDIT_REC = null; loadReport(); };
+$('#repFrom').onchange = () => { REPORT_PAGE = 1; loadReport(); };
+$('#repTo').onchange = () => {
+  const f = $('#repFrom').value, t = $('#repTo').value;
+  if(f && t && f > t){ toast('起日晚於迄日，已自動對調', true); $('#repFrom').value = t; $('#repTo').value = f; }
+  REPORT_PAGE = 1;
+  loadReport();
+};
+
+// 快速區間
+document.addEventListener('click', e => {
+  const pg = e.target.closest('[data-page]');
+  if(pg){
+    const act = pg.dataset.page;
+    const total = (() => { const r = range(); const l = ledgerOf(Number($('#reportSelect').value), r.from, r.to); return l ? l.items.length : 0; })();
+    const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if(act === 'first') REPORT_PAGE = 1;
+    else if(act === 'prev') REPORT_PAGE = Math.max(1, REPORT_PAGE - 1);
+    else if(act === 'next') REPORT_PAGE = Math.min(pages, REPORT_PAGE + 1);
+    else if(act === 'last') REPORT_PAGE = pages;
+    else if(act === 'all'){ REPORT_ALL = true; REPORT_PAGE = 1; }
+    else if(act === 'fold'){ REPORT_ALL = false; REPORT_PAGE = 1; }
+    loadReport();
+    return;
+  }
+  const b = e.target.closest('[data-range]');
+  if(!b) return;
+  const mode = b.dataset.range;
+  const d = new Date(), y = d.getFullYear(), m = d.getMonth();
+  const iso = dt => { const x = new Date(dt); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,10); };
+  if(mode === 'month'){
+    $('#repFrom').value = iso(new Date(y, m, 1));
+    $('#repTo').value = iso(new Date(y, m + 1, 0));
+  } else if(mode === 'last'){
+    $('#repFrom').value = iso(new Date(y, m - 1, 1));
+    $('#repTo').value = iso(new Date(y, m, 0));
+  } else {
+    $('#repFrom').value = '';
+    $('#repTo').value = '';
+  }
+  REPORT_PAGE = 1;
+  loadReport();
+});
+
+$('#btnPrint').onclick = () => {
+  // 列印時自動展開全部（列印完還原原本的分頁狀態）
+  const wasAll = REPORT_ALL, wasPage = REPORT_PAGE;
+  REPORT_ALL = true;
+  loadReport();
+  const restore = () => { REPORT_ALL = wasAll; REPORT_PAGE = wasPage; loadReport(); window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  setTimeout(() => { window.print(); setTimeout(restore, 800); }, 120);
+};
+
+/* ---------- 匯出全班 PDF（Canvas 排版 → 直接下載 PDF 檔，不開列印視窗） ---------- */
+function monthRange(){
+  const d = new Date(), y = d.getFullYear(), m = d.getMonth();
+  const iso = dt => { const x = new Date(dt); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0, 10); };
+  return {from: iso(new Date(y, m, 1)), to: iso(new Date(y, m + 1, 0))};
+}
+
+const PDF_FONT = '"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",sans-serif';
+
+/* 文字換行（逐字，適合中文） */
+function pdfWrap(ctx, text, maxW){
+  const chars = Array.from(String(text ?? ''));
+  const lines = []; let cur = '';
+  for(const ch of chars){
+    const t = cur + ch;
+    if(cur && ctx.measureText(t).width > maxW){ lines.push(cur); cur = ch; }
+    else cur = t;
+  }
+  lines.push(cur);
+  return lines;
+}
+/* 超過行數就截斷並加刪節號 */
+function pdfClip(lines, maxLines, ctx, maxW){
+  if(lines.length <= maxLines) return lines;
+  const out = lines.slice(0, maxLines);
+  let last = out[maxLines - 1];
+  while(last.length > 1 && ctx.measureText(last + '…').width > maxW) last = last.slice(0, -1);
+  out[maxLines - 1] = last + '…';
+  return out;
+}
+
+/* 把一位學生畫成一張 A4 畫布 */
+function renderStudentPdf(led, label, money2){
+  const MM = 96 / 25.4;                       // 96dpi 下 1mm 的 px
+  const W = 210 * MM, H = 297 * MM;
+  const M = {l: 10 * MM, r: 10 * MM, t: 10 * MM, b: 8 * MM};
+  const SCALE = 2.5;                          // 輸出約 240dpi
+
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(W * SCALE); cv.height = Math.round(H * SCALE);
+  const ctx = cv.getContext('2d');
+  ctx.scale(SCALE, SCALE);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.textBaseline = 'alphabetic';
+
+  const cw = W - M.l - M.r;
+  const FONT = sz => `${sz}px ${PDF_FONT}`;
+  const BOLD = sz => `600 ${sz}px ${PDF_FONT}`;
+
+  /* ---- 資料列 ---- */
+  const bodyRows = [];
+  if(led.from) bodyRows.push({kind: 'open', day: '—', type: '—', item: '月初餘額', debit: '', credit: '', bal: money2(led.opening)});
+  if(led.items.length){
+    for(const it of led.items) bodyRows.push({
+      kind: 'item',
+      day: dayWithWeek(it.day),
+      type: it.kind,
+      item: it.name + (it.note && it.kind === '餐費' ? `（${it.note}）` : ''),
+      debit: it.debit ? money2(it.debit) : '',
+      credit: it.credit ? money2(it.credit) : '',
+      bal: money2(it.balance),
+      neg: it.balance < 0
+    });
+  } else {
+    bodyRows.push({kind: 'empty', day: '', type: '', item: '此期間沒有紀錄', debit: '', credit: '', bal: ''});
+  }
+
+  /* ---- 欄位 ---- */
+  const cols = [
+    {w: .15,  label: '日期', align: 'left'},
+    {w: .12,  label: '類型', align: 'left'},
+    {w: .33,  label: '項目', align: 'left'},
+    {w: .135, label: '餐費', align: 'right'},
+    {w: .135, label: '收入', align: 'right'},
+    {w: .13,  label: '餘額', align: 'right'}
+  ];
+  const frac = []; let acc = 0;
+  for(const c of cols){ frac.push(acc); acc += c.w; }
+  const colX = i => M.l + frac[i] * cw;
+  const colW = i => cols[i].w * cw;
+  const padX = 5, padY = 4.5;
+
+  /* ---- 標題區 ---- */
+  const nameY = M.t + 20;
+  ctx.font = BOLD(20); ctx.fillStyle = '#111'; ctx.textAlign = 'left';
+  ctx.fillText(led.student.name, M.l, nameY);
+  const nameW = ctx.measureText(led.student.name).width;
+  if(led.student.note){
+    ctx.font = FONT(11.5); ctx.fillStyle = '#555';
+    ctx.fillText(led.student.note, M.l + nameW + 8, nameY - 1);
+  }
+  ctx.font = FONT(9.5); ctx.fillStyle = '#444'; ctx.textAlign = 'right';
+  ctx.fillText(`期間：${label}　·　共 ${led.items.length} 筆`, W - M.r, nameY - 3);
+
+  const divY = M.t + 28;
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(M.l, divY); ctx.lineTo(W - M.r, divY); ctx.stroke();
+
+  ctx.font = FONT(8.5); ctx.fillStyle = '#777'; ctx.textAlign = 'left';
+  ctx.fillText('月初／月末為該期間起訖的累計餘額；差額為負表示尚欠餐費。', M.l, divY + 13);
+
+  const tableTop = divY + 24;
+  const footerY = H - M.b - 1;
+  const availH = footerY - 14 - tableTop;
+
+  /* ---- 版面計算（自動縮字，保證一頁一位學生） ---- */
+  function layoutAt(fs){
+    const lh = fs * 1.34;
+    ctx.font = FONT(fs);
+    const maxLines = fs >= 8.2 ? 2 : 1;
+    const rows = bodyRows.map(r => {
+      const texts = [r.day, r.type, r.item, r.debit, r.credit, r.bal];
+      const cellLines = texts.map((t, i) => {
+        const mw = colW(i) - padX * 2;
+        const ml = (cols[i].align === 'right' || i === 0 || i === 1) ? 1 : maxLines;
+        return ml === 1 ? pdfClip(pdfWrap(ctx, t, mw), 1, ctx, mw) : pdfClip(pdfWrap(ctx, t, mw), ml, ctx, mw);
+      });
+      const n = Math.max(1, ...cellLines.map(l => l.length));
+      return {r, cellLines, h: n * lh + padY * 2};
+    });
+    const rowH = fs * 1.34 + padY * 2;
+    const total = rowH * 2 + rows.reduce((a, b) => a + b.h, 0);
+    return {fs, lh, rowH, rows, total};
+  }
+
+  let L = layoutAt(11.6);
+  for(let fs = 11.6; fs >= 6.2; fs -= 0.2){
+    L = layoutAt(fs);
+    if(L.total <= availH) break;
+  }
+
+  /* ---- 畫表格 ---- */
+  function cell(lines, i, xLeft, yTop, lh, fs, color, bold){
+    ctx.font = bold ? BOLD(fs) : FONT(fs);
+    ctx.fillStyle = color;
+    const w = colW(i);
+    lines.forEach((ln, k) => {
+      const base = yTop + padY + lh * k + fs * 0.8;
+      if(cols[i].align === 'right'){ ctx.textAlign = 'right'; ctx.fillText(ln, xLeft + w - padX, base); }
+      else { ctx.textAlign = 'left'; ctx.fillText(ln, xLeft + padX, base); }
+    });
+  }
+
+  let y = tableTop;
+  /* 表頭 */
+  ctx.fillStyle = '#eef2f7'; ctx.fillRect(M.l, y, cw, L.rowH);
+  cols.forEach((c, i) => cell([c.label], i, colX(i), y, L.lh, L.fs, '#111', true));
+  ctx.font = FONT(L.fs);
+  y += L.rowH;
+
+  /* 內文 */
+  L.rows.forEach((row, idx) => {
+    if(row.r.kind === 'empty'){
+      ctx.fillStyle = '#fff'; ctx.fillRect(M.l, y, cw, row.h);
+      ctx.font = FONT(9.5); ctx.fillStyle = '#777'; ctx.textAlign = 'center';
+      ctx.fillText('此期間沒有紀錄', M.l + cw / 2, y + row.h / 2 + 3.5);
+    } else {
+      if(row.r.kind === 'item' && idx % 2 === 1){ ctx.fillStyle = '#fafbfc'; ctx.fillRect(M.l, y, cw, row.h); }
+      const color = row.r.kind === 'open' ? '#555' : (row.r.neg ? '#b3261e' : '#111');
+      row.cellLines.forEach((lines, i) => cell(lines, i, colX(i), y, L.lh, L.fs, (i === 5 ? color : (row.r.kind === 'open' ? '#555' : '#111'))));
+    }
+    y += row.h;
+  });
+
+  /* 合計列 */
+  ctx.fillStyle = '#f2f5f9'; ctx.fillRect(M.l, y, cw, L.rowH);
+  const tf = ['本月合計', '', '', money2(led.total_debit), money2(led.total_credit), money2(led.balance)];
+  tf.forEach((t, i) => {
+    if(i === 2 || i === 1) return;
+    cell([t], i, colX(i), y, L.lh, L.fs, i === 5 && led.balance < 0 ? '#b3261e' : '#111', true);
+  });
+  const endY = y + L.rowH;
+
+  /* 格線 */
+  ctx.strokeStyle = '#a9b2bd'; ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(M.l, tableTop); ctx.lineTo(W - M.r, tableTop);
+  cols.forEach((c, i) => { const x = colX(i); ctx.moveTo(x, tableTop); ctx.lineTo(x, endY); });
+  ctx.moveTo(W - M.r, tableTop); ctx.lineTo(W - M.r, endY);
+  let yy = tableTop;
+  ctx.moveTo(M.l, yy); ctx.lineTo(W - M.r, yy); yy += L.rowH;
+  ctx.moveTo(M.l, yy); ctx.lineTo(W - M.r, yy);
+  for(const row of L.rows){ yy += row.h; ctx.moveTo(M.l, yy); ctx.lineTo(W - M.r, yy); }
+  yy += L.rowH;
+  ctx.stroke();
+
+  /* 頁尾 */
+  ctx.font = FONT(7.5); ctx.fillStyle = '#8a8f98'; ctx.textAlign = 'right';
+  ctx.fillText(`匯出時間：${nowStr()}　·　學生餐費管理`, W - M.r, footerY);
+
+  return cv;
+}
+
+/* dataURL → 二進位 */
+function dataUrlBytes(url){
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const arr = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+/* 組 PDF：每頁一張 JPEG */
+function buildPdfBlob(imgs, wPt, hPt){
+  const enc = new TextEncoder();
+  const chunks = []; let pos = 0;
+  const push = d => { const b = typeof d === 'string' ? enc.encode(d) : d; chunks.push(b); pos += b.length; };
+  const offsets = [];
+  const startObj = n => { offsets[n] = pos; push(`${n} 0 obj\n`); };
+  const endObj = () => push('endobj\n');
+
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+
+  const n = imgs.length;
+  const objPage = i => 3 + i * 3;
+  const objCont = i => 4 + i * 3;
+  const objImg = i => 5 + i * 3;
+  const total = 2 + n * 3;
+
+  startObj(1); push('<< /Type /Catalog /Pages 2 0 R >>\n'); endObj();
+
+  startObj(2);
+  push(`<< /Type /Pages /Count ${n} /Kids [${imgs.map((_, i) => `${objPage(i)} 0 R`).join(' ')}] >>\n`);
+  endObj();
+
+  for(let i = 0; i < n; i++){
+    const im = imgs[i];
+    startObj(objPage(i));
+    push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${wPt.toFixed(2)} ${hPt.toFixed(2)}] /Resources << /XObject << /Im0 ${objImg(i)} 0 R >> >> /Contents ${objCont(i)} 0 R >>\n`);
+    endObj();
+
+    const content = `q\n${wPt.toFixed(2)} 0 0 ${hPt.toFixed(2)} 0 0 cm\n/Im0 Do\nQ\n`;
+    startObj(objCont(i));
+    push(`<< /Length ${content.length} >>\nstream\n${content}endstream\n`);
+    endObj();
+
+    startObj(objImg(i));
+    push(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bytes.length} >>\nstream\n`);
+    push(im.bytes);
+    push('\nendstream\n');
+    endObj();
+  }
+
+  const xrefPos = pos;
+  let xref = `xref\n0 ${total + 1}\n0000000000 65535 f \n`;
+  for(let k = 1; k <= total; k++) xref += String(offsets[k]).padStart(10, '0') + ' 00000 n \n';
+  push(xref);
+  push(`trailer\n<< /Size ${total + 1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF\n`);
+
+  return new Blob(chunks, {type: 'application/pdf'});
+}
+
+let PDF_EXPORTING = false;
+
+async function exportAllPdf(){
+  if(!DB.students.length) return toast('還沒有學生', true);
+  if(PDF_EXPORTING) return;
+  const btn = $('#btnAllPdf');
+  const oldLabel = btn.textContent;
+  PDF_EXPORTING = true;
+  btn.disabled = true;
+  btn.textContent = '產生 PDF 中…0%';
+
+  try{
+    const r = range();
+    let from = r.from, to = r.to;
+    if(!from && !to){ const m = monthRange(); from = m.from; to = m.to; }
+    const label = rangeText(from, to);
+    const money2 = v => Number(v || 0).toLocaleString('zh-TW', {maximumFractionDigits: 2});
+    const tag = (from || to) ? `_${from || '起'}_${to || '今'}` : '';
+
+    const imgs = [];
+    for(let i = 0; i < DB.students.length; i++){
+      const led = ledgerOf(DB.students[i].id, from, to);
+      const cv = renderStudentPdf(led, label, money2);
+      const url = cv.toDataURL('image/jpeg', 0.86);
+      imgs.push({bytes: dataUrlBytes(url), w: cv.width, h: cv.height});
+      cv.width = cv.height = 0;
+      btn.textContent = `產生 PDF 中…${Math.round((i + 1) / DB.students.length * 100)}%`;
+      await new Promise(res => setTimeout(res, 0));
+    }
+
+    const blob = buildPdfBlob(imgs, 595.28, 841.89);   // A4
+    const name = `全班餐費紀錄${tag}.pdf`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast(`已下載 ${name}（${imgs.length} 頁，每位學生 1 頁）`);
+  }catch(e){
+    console.error(e);
+    toast('產生 PDF 失敗：' + (e && e.message ? e.message : e), true);
+  }finally{
+    PDF_EXPORTING = false;
+    btn.disabled = false;
+    btn.textContent = oldLabel;
+  }
+}
+
+$('#btnAllPdf').onclick = exportAllPdf;
+
+$('#btnCsv').onclick = () => {
+  const sid = Number($('#reportSelect').value);
+  if(!sid) return toast('請先選學生', true);
+  const r = range();
+  const led = ledgerOf(sid, r.from, r.to);
+  if(!led.items.length && !led.opening) return toast('這個區間沒有資料', true);
+  const tag = (r.from || r.to) ? `_${r.from || '起'}_${r.to || '今'}` : '';
+  download(`${led.student.name}_餐費紀錄${tag}.csv`, csvOf(led), 'text/csv;charset=utf-8');
+  toast(`已匯出 ${led.items.length} 筆（${rangeText(r.from, r.to)}）`);
+};
+$('#btnRestore').onclick = () => restoreSnapshot($('#restoreSelect').value);
+
+$('#btnExportJson').onclick = exportJson;
+$('#btnImportJson').onclick = () => $('#fileInput').click();
+$('#fileInput').onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  if(f) importJson(f);
+  e.target.value = '';
+};
+$('#btnPullServer').onclick = async () => {
+  const btn = $('#btnPullServer');
+  btn.disabled = true; btn.textContent = '讀取中…';
+  try{ await pullFromServer(); }
+  finally{ btn.disabled = false; btn.textContent = '從伺服器匯入現有資料'; }
+};
+
+/* 全班 CSV：每人一段 */
+$('#btnClearBk').onclick = clearSnapshots;
+
+$('#btnExportAllCsv').onclick = () => {
+  if(!DB.students.length) return toast('還沒有學生', true);
+  const r = range();
+  const label = rangeText(r.from, r.to);
+  const parts = DB.students.map(st => {
+    const led = ledgerOf(st.id, r.from, r.to);
+    const q = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+    const rows = [
+      [`學生：${led.student.name}`],
+      [`期間：${label}`],
+      ['日期','類型','項目','餐費支出','收入','備註','累計餘額'],
+      ...(led.from ? [['（月初）','','月初餘額','','','', led.opening]] : []),
+      ...led.items.map(it => [it.day, it.kind, it.name, it.debit || '', it.credit || '', it.note, it.balance]),
+      ['本月合計','','', led.total_debit, led.total_credit, '', led.balance],
+      [],
+    ];
+    return rows.map(row => row.map(q).join(',')).join('\r\n');
+  });
+  const tag = (r.from || r.to) ? `_${r.from || '起'}_${r.to || '今'}` : '';
+  download(`全班餐費紀錄${tag}.csv`, '\ufeff' + parts.join('\r\n'), 'text/csv;charset=utf-8');
+  toast(`已匯出全班 CSV（${label}）`);
+};
+
+/* ================== 初始化 ================== */
+function renderStorageNote(){
+  const inf = storageInfo();
+  const where = USE_IDB ? 'IndexedDB' : 'localStorage';
+  const upd = DB.updatedAt ? new Date(DB.updatedAt).toLocaleString('zh-TW', {hour12:false}) : '（尚未儲存）';
+
+  // 百分比：有可用容量就用實際比例，否則用 5MB 上限
+  const pct = Math.max(0, Math.min(100, inf.pct || 0));
+  const tier = pct >= 85 ? 'bad' : (pct >= 60 ? 'warn' : '');
+  const shown = pct > 0 && pct < 1 ? pct.toFixed(2) : pct.toFixed(1);
+  const width = pct > 0 ? Math.max(pct, 1.2) : 0;   // 有資料就至少畫一小段
+
+  const capText = USE_IDB
+    ? (inf.quotaKB ? `可用 ${fmtSize(inf.quotaKB)}` : '可用容量依瀏覽器而定')
+    : `上限 ${QUOTA_KB} KB`;
+
+  $('#storageNote').innerHTML =
+    `📌 資料存在<strong>這台電腦的瀏覽器</strong>（${where}），不會上傳。` +
+    `換電腦或換瀏覽器看不到同一份資料，記得定期用「備份 / 還原」匯出 JSON 檔。` +
+    `<div style="margin-top:8px">
+       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px">
+         <span>儲存空間 <strong>${fmtSize(inf.usedKB)}</strong>／${capText}</span>
+         <span style="font-weight:700;color:${tier === 'bad' ? 'var(--bad)' : (tier === 'warn' ? '#b26b00' : 'var(--brand)')}">${shown}%</span>
+       </div>
+       <div class="meter ${tier}" style="margin:5px 0 5px"><i style="width:${width}%"></i></div>
+       <div class="muted" style="font-size:12px">內容 ${fmtSize(inf.dbKB)} ＋ 快照 ${fmtSize(inf.bkKB)}　·　最後更新：${upd}</div>
+     </div>`;
+}
+
+let _noteTimer = null;
+function scheduleStorageNote(){
+  clearTimeout(_noteTimer);
+  _noteTimer = setTimeout(async () => {
+    if(USE_IDB) await refreshEstimate();
+    renderStorageNote();
+  }, 500);
+}
+
+async function boot(){
+  // 1) 開啟 IndexedDB
+  try{
+    _idb = await idbOpen();
+    USE_IDB = true;
+  }catch(e){
+    USE_IDB = false;
+    console.warn('IndexedDB 不可用，改用 localStorage：', e);
+  }
+
+  // 2) 讀取資料（IDB 優先；沒有就從 localStorage 升級過來）
+  let dataDoc = null, dataBk = null, migrated = false, lsBytes = 0;
+  if(USE_IDB){
+    try{
+      dataDoc = await idbGet('db');
+      dataBk  = await idbGet('backups');
+    }catch(e){ console.warn('IDB 讀取失敗', e); }
+  }
+  if(!dataDoc){
+    try{
+      const raw  = localStorage.getItem(K_DB);
+      const rawB = localStorage.getItem(K_BK);
+      lsBytes = (raw || '').length + (rawB || '').length;
+      if(raw){ dataDoc = JSON.parse(raw); migrated = true; }
+      if(rawB){ dataBk = JSON.parse(rawB); }
+    }catch(e){ console.warn('localStorage 讀取失敗', e); }
+  }
+  DB = normalize(dataDoc);
+  MEM_BK = Array.isArray(dataBk) ? dataBk : [];
+
+  if(USE_IDB && migrated){
+    try{
+      await idbPut('db', clone(DB));
+      await idbPut('backups', clone(MEM_BK));
+      localStorage.removeItem(K_DB);
+      localStorage.removeItem(K_BK);
+      setTimeout(() => toast(`已升級為 IndexedDB，釋放約 ${(lsBytes / 1024).toFixed(0)} KB 空間`), 700);
+    }catch(e){ console.warn('升級寫入失敗', e); }
+  }
+
+  // 3) 更新可用容量
+  await refreshEstimate();
+
+  // 4) 表單預設值
+  $('[name=day]', $('#mealForm')).value = today();
+  $('[name=day]', $('#payForm')).value = today();
+
+  // 5) 當天快照
+  if(DB.students.length || DB.meals.length || DB.payments.length) addSnapshot('daily');
+
+  // 6) 繪製
+  renderStorageNote();
+  renderAll();
+  renderBackups();
+}
+
+boot().catch(e => {
+  console.error(e);
+  USE_IDB = false;
+  renderStorageNote();
+  renderAll();
+  renderBackups();
+});
+</script>
+</body>
+</html>
